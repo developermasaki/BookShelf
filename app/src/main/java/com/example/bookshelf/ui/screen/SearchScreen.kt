@@ -65,6 +65,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SearchScreen(
     bookShelfContentUiState: BookShelfContentUiState,
+    state: LazyGridState,
     updateSearchShowOn: () -> Unit,
     navController: NavHostController,
     state: LazyGridState,
@@ -126,12 +127,10 @@ fun SearchScreen(
             }
             Button(
                 onClick = {
-                    coroutineScope.launch{
-                        keyboardController?.hide()
-                        navController.navigateUp()
-                        research(true)
-                        state.scrollToItem(0)
-                    }
+                    keyboardController?.hide()
+                    navController.navigateUp()
+                    research(true)
+                    state.requestScrollToItem(0)
                 },
                 enabled = bookShelfContentUiState.judgeIsNoInput,
                 modifier = Modifier

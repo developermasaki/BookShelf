@@ -232,7 +232,7 @@ private fun SuccessScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (bookShelfContentUiState.showOnFavoriteScreen) {
                             OriginalLazyVertiaclGrid(
-                                state = state,
+                                state = rememberLazyGridState(),
                                 bookShelfContentUiState = bookShelfContentUiState,
                                 scrollBehavior = scrollBehavior,
                                 navController = navController,
