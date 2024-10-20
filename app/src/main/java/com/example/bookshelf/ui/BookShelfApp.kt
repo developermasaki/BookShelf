@@ -21,9 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -32,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.bookshelf.R
+import com.example.bookshelf.ui.component.enterAlwaysScrollBehavior
 import com.example.bookshelf.ui.screen.BookShelfContentUiState
 import com.example.bookshelf.ui.screen.BookShelfViewModel
 import com.example.bookshelf.ui.screen.HomeContent
@@ -40,12 +38,13 @@ import com.example.bookshelf.ui.screen.HomeContent
 @Stable
 @Composable
 fun BookShelfApp(modifier: Modifier = Modifier) {
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val bookShelfViewModel: BookShelfViewModel = viewModel(factory = BookShelfViewModel.Factory)
+
+    // 検索後にTopAppBarが畳まれた状況になるのを回避するため
+    val scrollBehavior = if(bookShelfViewModel.bookShelfContentUiState.firstSearch) TopAppBarDefaults.enterAlwaysScrollBehavior() else enterAlwaysScrollBehavior()
+
     val navController = rememberNavController()
     val favoriteBookList by bookShelfViewModel.favoriteBookList.collectAsState()
-    var selectedIndex by remember { mutableIntStateOf(0) }
-    val options = listOf("Favorite", "Search")
 
     Column(
         modifier = modifier
@@ -60,25 +59,6 @@ fun BookShelfApp(modifier: Modifier = Modifier) {
             research = {bookShelfViewModel.getBookShelfItems()},
             showDetailsScreen = {bookShelfViewModel.isShowDetailsScreen()}
         )
-//        SingleChoiceSegmentedButtonRow(
-//            modifier = Modifier
-//                .animateContentSize()
-//                .padding(bottom = 32.dp)
-//                .height(if(bookShelfViewModel.bookShelfContentUiState.showOnSearchScreen || bookShelfViewModel.bookShelfContentUiState.showOnDetailsScreen) 0.dp else 80.dp)
-//        ){
-//            options.forEachIndexed { index, s ->
-//                SegmentedButton(
-//                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-//                    onClick = {
-//                        selectedIndex = index
-//                        bookShelfViewModel.isShowFavoriteScreen()
-//                    },
-//                    selected = index == if(bookShelfViewModel.bookShelfContentUiState.showOnFavoriteScreen) 0 else 1
-//                ){
-//                    Text(s)
-//                }
-//            }
-//        }
         HomeContent(
             screenUiState = bookShelfViewModel.screenUiState,
             scrollBehavior = scrollBehavior,
