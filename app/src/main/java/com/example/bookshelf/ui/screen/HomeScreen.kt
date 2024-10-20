@@ -168,6 +168,7 @@ BookCardがネストされすぎて、引数ではスコープを渡すことが
 数日にわたる長い戦いだったが、なんとか思い描いた動きになった。
  */
 
+// TODO rememberLazyGridState()をFavoriteとSearchで分ける
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -313,9 +314,9 @@ private fun SuccessScreen(
                 composable<Route.Search> {
                     SearchScreen(
                         bookShelfContentUiState = bookShelfContentUiState,
+                        updateSearchShowOn = updateSearchShowOn,
                         state = state,
                         navController = navController,
-                        updateSearchShowOn = updateSearchShowOn,
                         onValueChanged = onValueChanged,
                         research = research,
                         animatedVisibilityScope = this@composable,

@@ -26,12 +26,15 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -48,6 +51,7 @@ import androidx.navigation.NavHostController
 import com.example.bookshelf.R
 import com.example.bookshelf.data.local.DialogListModel
 import com.example.bookshelf.data.local.LocalDataProvider
+import kotlinx.coroutines.launch
 
 /*
 本当はDialogで対応しようと思ったが、DialogをFABからアニメーションすることができないと分かり、HomeContent全体に表示
@@ -64,6 +68,7 @@ fun SearchScreen(
     state: LazyGridState,
     updateSearchShowOn: () -> Unit,
     navController: NavHostController,
+    state: LazyGridState,
     onValueChanged: (EditTextField, String) -> Unit,
     research: (Boolean) -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -74,6 +79,7 @@ fun SearchScreen(
     val keyboardController = LocalSoftwareKeyboardController.current
     val sharedTransitionScope = LocalSharedTransitionScope.current
         ?: throw IllegalStateException("No SharedElementScope found")
+    val coroutineScope = rememberCoroutineScope()
 
     BackHandler {
         focusManager.clearFocus()
