@@ -231,7 +231,7 @@ private fun SuccessScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (bookShelfContentUiState.showOnFavoriteScreen) {
                             OriginalLazyVertiaclGrid(
-                                state = state,
+                                state = rememberLazyGridState(),
                                 bookShelfContentUiState = bookShelfContentUiState,
                                 scrollBehavior = scrollBehavior,
                                 navController = navController,
@@ -313,6 +313,7 @@ private fun SuccessScreen(
                 composable<Route.Search> {
                     SearchScreen(
                         bookShelfContentUiState = bookShelfContentUiState,
+                        state = state,
                         navController = navController,
                         updateSearchShowOn = updateSearchShowOn,
                         onValueChanged = onValueChanged,

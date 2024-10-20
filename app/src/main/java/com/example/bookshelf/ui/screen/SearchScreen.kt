@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -60,6 +61,7 @@ import com.example.bookshelf.data.local.LocalDataProvider
 @Composable
 fun SearchScreen(
     bookShelfContentUiState: BookShelfContentUiState,
+    state: LazyGridState,
     updateSearchShowOn: () -> Unit,
     navController: NavHostController,
     onValueChanged: (EditTextField, String) -> Unit,
@@ -122,6 +124,7 @@ fun SearchScreen(
                     keyboardController?.hide()
                     navController.navigateUp()
                     research(true)
+                    state.requestScrollToItem(0)
                 },
                 enabled = bookShelfContentUiState.judgeIsNoInput,
                 modifier = Modifier
