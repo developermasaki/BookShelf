@@ -50,7 +50,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
@@ -616,11 +615,14 @@ fun PreviewSuccessScreen1() {
             )
         )
     )
+    val searchUiState = SearchUiState(
+        bookShelfItems = fakeBookShelfList
+    )
 
     BookShelfTheme {
         HomeContents(
             pagerState = rememberPagerState { 0 },
-            searchUiState = SearchUiState(),
+            searchUiState = searchUiState,
             homeUiState = HomeUiState(),
             navController = rememberNavController(),
             animatedVisibilityScope = null,

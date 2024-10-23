@@ -36,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,7 +51,6 @@ import androidx.navigation.NavHostController
 import com.example.bookshelf.R
 import com.example.bookshelf.data.local.LocalDataProvider
 import com.example.bookshelf.ui.TopAppBar1
-import com.example.bookshelf.ui.component.OriginalEnterAlwaysScrollBehavior
 import com.example.bookshelf.ui.navigation.LocalSharedTransitionScope
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalLayoutApi::class,
