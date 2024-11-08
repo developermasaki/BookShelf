@@ -12,6 +12,7 @@ object FakeDataSource {
         totalItems = 1,
         items = listOf(
             Items(
+                id = "1",
                 volumeInfo = VolumeInfo(
                     title = "The Great Gatsby",
                     authors = listOf("Mas"),

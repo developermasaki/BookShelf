@@ -11,26 +11,33 @@ import androidx.lifecycle.viewModelScope
 import com.example.bookshelf.data.BookShelfRepository
 import com.example.bookshelf.data.UserPreferencesRepository
 import com.example.bookshelf.network.Items
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.Currency
+import java.util.UUID
 
 @Immutable
-sealed interface ScreenUiState2{
-    data object Success: ScreenUiState2
-    data class Error(val errorType: String, val errorDetails: String) : ScreenUiState2
-    data object Loading: ScreenUiState2
+sealed interface SearchScreenUiState{
+    data object Success: SearchScreenUiState
+    data class Error(val errorType: String, val errorDetails: String) : SearchScreenUiState
+    data class Loading(val noSearched: Boolean): SearchScreenUiState
 }
 
 class SearchViewModel(
     private val bookShelfRepository: BookShelfRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
 ): ViewModel() {
-    var screenUiState2: ScreenUiState2 by mutableStateOf(ScreenUiState2.Success)
-        private set
     var searchUiState by mutableStateOf(SearchUiState())
         private set
+    private var _showedBookShelfItems = MutableStateFlow<List<Pair<String, Items?>>>(listOf())
+    val showedBookShelfItems: StateFlow<List<Pair<String, Items?>>> = _showedBookShelfItems.asStateFlow()
     private var index by mutableIntStateOf(0)
 
     init {
@@ -39,17 +46,17 @@ class SearchViewModel(
                 fullTextSearch = userPreferencesRepository.searchKeyword.first(),
                 titleSearch = userPreferencesRepository.title.first(),
                 authorSearch = userPreferencesRepository.author.first(),
-                publishingCompany = userPreferencesRepository.publisher.first()
+                publishingCompany = userPreferencesRepository.publisher.first(),
+                screenUiState = SearchScreenUiState.Loading(noSearched = true)
             )
             judgeIsNoInput()
         }
     }
 
     fun pickUpItemBookShelf(key: String?): Items {
-        val returnItems = searchUiState.bookShelfItems.filter {
-            it?.id == key
-        }
-        return if(returnItems.isEmpty()) Items() else returnItems.first()!!
+        return showedBookShelfItems.value.firstOrNull {
+            it.second?.id == key
+        }?.second ?: Items()
     }
 
     fun updateEditTextField(key: EditTextField, value: String) {
@@ -57,23 +64,22 @@ class SearchViewModel(
             when(key) {
                 EditTextField.FullTextSearch -> {
                     searchUiState = searchUiState.copy(fullTextSearch = value)
-                    userPreferencesRepository.saveSearchKeyword(value)
+                    withContext(Dispatchers.IO){ userPreferencesRepository.saveSearchKeyword(value) }
                 }
                 EditTextField.TitleSearch -> {
                     searchUiState = searchUiState.copy(titleSearch = value)
-                    userPreferencesRepository.saveTitle(value)
+                    withContext(Dispatchers.IO) { userPreferencesRepository.saveTitle(value) }
                 }
                 EditTextField.AuthorSearch -> {
                     searchUiState = searchUiState.copy(authorSearch = value)
-                    userPreferencesRepository.saveAuthor(value)
+                    withContext(Dispatchers.IO) { userPreferencesRepository.saveAuthor(value) }
                 }
                 EditTextField.PublishingCompany -> {
                     searchUiState = searchUiState.copy(publishingCompany = value)
-                    userPreferencesRepository.savePublishingCompany(value)
+                    withContext(Dispatchers.IO) { userPreferencesRepository.savePublishingCompany(value) }
                 }
             }
         }
-        Log.d("EditText",value)
         judgeIsNoInput()
     }
 
@@ -102,31 +108,17 @@ class SearchViewModel(
         return  showedPrice
     }
 
-    //TODO privateで処理できないか考える
-    fun bestImage(items: Items?): String? {
-        val imageLinks = items?.volumeInfo?.imageLinks
-        return if(imageLinks?.extraLarge != null) {
-            Log.d("highImage", "highImage")
-            imageLinks.extraLarge
-        } else if (imageLinks?.large != null) {
-            imageLinks.large
-        } else if (imageLinks?.medium != null) {
-            imageLinks.medium
-        } else if (imageLinks?.small != null) {
-            imageLinks.small
-        } else {
-            imageLinks?.thumbnail
-        }
-    }
-
     fun isFirstSearch(firstSearch: Boolean){
         searchUiState = searchUiState.copy(firstSearch = firstSearch)
     }
 
-    fun getBookShelfItems(isFirstSearch: Boolean = false) {
+    suspend fun getBookShelfItems(isFirstSearch: Boolean = false) {
         if (isFirstSearch) {
             index = 0
-            screenUiState2 = ScreenUiState2.Loading
+            _showedBookShelfItems.update {
+                emptyList()
+            }
+            searchUiState = searchUiState.copy(screenUiState = SearchScreenUiState.Loading(noSearched = false))
             searchUiState = searchUiState.copy(firstSearch = true)
         } else {
             index += 38
@@ -146,31 +138,42 @@ class SearchViewModel(
             if (searchUiState.publishingCompany != "") {
                 searchText += "+inpublisher:${searchUiState.publishingCompany}"
             }
-            Log.d("searchText", searchText)
 
             try {
                 val bookShelfItems: List<Items?> = bookShelfRepository.getBookShelfItems(
                     search = searchText,
                     index = index
                 ).items ?: emptyList()
-                Log.d("index","$index")
-
-                if(screenUiState2 is ScreenUiState2.Success) {
-                    searchUiState = searchUiState.copy(
-                        bookShelfItems = searchUiState.bookShelfItems + bookShelfItems
-                    )
+                val bookShelfItemsList = mutableListOf<Pair<String, Items?>>()
+                /* 時々、OriginalLazyVerticalGridをスクロールしていると、なぜか同じBookCardの内容が二つ作られていることがあった。
+                そこでGoogleBooksAPIから送信されるデータに重複があるのではないかと考え、コードを作った。
+                 */
+                for(bookShelfItem in bookShelfItems) {
+                    if(
+                        !bookShelfItemsList.any { it.second?.id == bookShelfItem?.id } &&
+                        showedBookShelfItems.value.none { it.second?.id == bookShelfItem?.id }
+                        ){
+                        val bookShelfItemId = UUID.randomUUID().toString()
+                        bookShelfItemsList.add(Pair(bookShelfItemId, bookShelfItem))
+                    } else{
+                        Log.d("bookShelfItems","含まれていた")
+                    }
+                }
+                if(searchUiState.screenUiState is SearchScreenUiState.Success) {
+                    _showedBookShelfItems.update {
+                        it + bookShelfItemsList
+                    }
                 } else {
-                    searchUiState = searchUiState.copy(
-                        bookShelfItems = bookShelfItems
-                    )
-                    screenUiState2 = ScreenUiState2.Success
+                    _showedBookShelfItems.update {
+                        bookShelfItemsList
+                    }
+                    searchUiState = searchUiState.copy(screenUiState = SearchScreenUiState.Success)
                 }
             }catch (e: IOException) {
-                screenUiState2 = ScreenUiState2.Error("IOException", "$e")
+                searchUiState = searchUiState.copy(screenUiState = SearchScreenUiState.Error("IOException", "$e"))
             }catch (e: retrofit2.HttpException){
-                screenUiState2 = ScreenUiState2.Error("HttpException", "$e")
+                searchUiState = searchUiState.copy(screenUiState = SearchScreenUiState.Error("HttpException", "$e"))
             }
-            Log.d("ScreenUiState", "$screenUiState2")
         }
     }
 
@@ -181,11 +184,9 @@ class SearchViewModel(
                     searchUiState.publishingCompany == "" &&
                     searchUiState.fullTextSearch == "")
         )
-        Log.d("bookShelfContentUiState","$searchUiState")
     }
 }
 
-@Immutable
 data class SearchUiState(
     val fullTextSearch: String = "",
     val titleSearch: String = "",
@@ -193,5 +194,10 @@ data class SearchUiState(
     val publishingCompany: String = "",
     val judgeIsNoInput: Boolean = true,
     val firstSearch: Boolean = false,
-    val bookShelfItems: List<Items?> = emptyList()
+    val screenUiState: SearchScreenUiState = SearchScreenUiState.Loading(noSearched = true)
 )
+
+@Immutable
+enum class EditTextField {
+    FullTextSearch, TitleSearch, AuthorSearch, PublishingCompany
+}

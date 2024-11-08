@@ -3,9 +3,12 @@ package com.example.bookshelf.ui.navigation
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -17,12 +20,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.example.bookshelf.ui.AppViewModelProvider
-import com.example.bookshelf.ui.screen.DetailsScreen1
+import com.example.bookshelf.ui.screen.DetailsScreen
 import com.example.bookshelf.ui.screen.HomeScreen
 import com.example.bookshelf.ui.screen.HomeViewModel
-import com.example.bookshelf.ui.screen.Route
-import com.example.bookshelf.ui.screen.SearchScreen1
+import com.example.bookshelf.ui.screen.SearchScreen
 import com.example.bookshelf.ui.screen.SearchViewModel
+import kotlinx.serialization.Serializable
 
 /*
 当初、BookCardがネストされすぎて、引数ではスコープを渡すことが出来なかった。そこで、CompositionLocalProviderで渡すことにした。
@@ -35,7 +38,19 @@ import com.example.bookshelf.ui.screen.SearchViewModel
 数日にわたる長い戦いだったが、なんとか思い描いた動きになった。
  */
 
+@Immutable
+interface Route {
+    @Serializable
+    object Search
+    @Serializable
+    object Home
+    @Serializable
+    object Parent
+}
+
 @OptIn(ExperimentalSharedTransitionApi::class)
+@Suppress("functionName")
+@Stable
 @Composable
 fun BookShelfNavHost(
     navController: NavHostController,
@@ -43,7 +58,8 @@ fun BookShelfNavHost(
 ){
     SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
         CompositionLocalProvider(
-            LocalSharedTransitionScope provides this
+            LocalSharedTransitionScope provides this,
+            LocalOverscrollConfiguration provides null
         ) {
             NavHost(
                 navController = navController,
@@ -66,8 +82,8 @@ fun BookShelfNavHost(
                         )
                     }
                     composable(
-                        "details/{itemId}",
-                        arguments = listOf(navArgument("itemId") { type = NavType.StringType }
+                        "favoriteDetails/{favoriteItemId}",
+                        arguments = listOf(navArgument("favoriteItemId") { type = NavType.StringType }
                         )
                     ) { backStackEntry ->
                         val parentEntry = remember(backStackEntry) {
@@ -76,9 +92,29 @@ fun BookShelfNavHost(
                         val homeViewModel: HomeViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = AppViewModelProvider.Factory)
                         val searchViewModel: SearchViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = AppViewModelProvider.Factory)
 
-                        DetailsScreen1(
-                            sharedElementKey = backStackEntry.arguments?.getString("itemId")!!,
-                            navHostController = navController,
+                        DetailsScreen(
+                            sharedElementKey = backStackEntry.arguments?.getString("favoriteItemId")!!,
+                            judgeScreen = "favorite",
+                            navController = navController,
+                            animatedVisibilityScope = this@composable,
+                            searchViewModel = searchViewModel,
+                            homeViewModel = homeViewModel
+                        )
+                    }
+                    composable(
+                        "searchDetails/{searchItemId}",
+                        arguments = listOf(navArgument("searchItemId"){type = NavType.StringType})
+                    ){backStackEntry ->
+                        val parentEntry = remember(backStackEntry) {
+                            navController.getBackStackEntry(Route.Parent)
+                        }
+                        val homeViewModel: HomeViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = AppViewModelProvider.Factory)
+                        val searchViewModel: SearchViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = AppViewModelProvider.Factory)
+
+                        DetailsScreen(
+                            sharedElementKey = backStackEntry.arguments?.getString("searchItemId")!!,
+                            judgeScreen = "search",
+                            navController = navController,
                             animatedVisibilityScope = this@composable,
                             searchViewModel = searchViewModel,
                             homeViewModel = homeViewModel
@@ -91,7 +127,7 @@ fun BookShelfNavHost(
                         val homeViewModel: HomeViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = AppViewModelProvider.Factory)
                         val searchViewModel: SearchViewModel = viewModel(viewModelStoreOwner = parentEntry, factory = AppViewModelProvider.Factory)
 
-                        SearchScreen1(
+                        SearchScreen(
                             navController = navController,
                             animatedVisibilityScope = this@composable,
                             homeViewModel = homeViewModel,

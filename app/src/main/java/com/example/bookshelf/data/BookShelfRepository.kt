@@ -12,7 +12,7 @@ interface BookShelfRepository{
 class NetworkBookShelfRepository(
     private val bookShelfApiService: BookShelfApiService,
 ): BookShelfRepository {
-    override suspend fun getBookShelfItems(search: String, index: Int): BookShelfItems = withContext(Dispatchers.Default) {
+    override suspend fun getBookShelfItems(search: String, index: Int): BookShelfItems = withContext(Dispatchers.IO){
         bookShelfApiService.getBookShelfItems(search = search, index = index)
     }
 }

@@ -1,6 +1,5 @@
 package com.example.bookshelf.ui.screen
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,11 +14,23 @@ import com.example.bookshelf.network.Items
 import com.example.bookshelf.network.RetailPrice
 import com.example.bookshelf.network.SaleInfo
 import com.example.bookshelf.network.VolumeInfo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.UUID
+
+@Immutable
+sealed interface FavoriteScreenUiState{
+    data object Success: FavoriteScreenUiState
+    data class Error(val errorType: String, val errorDetails: String) : FavoriteScreenUiState
+    data object Loading: FavoriteScreenUiState
+}
 
 // favoriteBookのデータ保存や検索を担当
 class HomeViewModel(
@@ -28,14 +39,22 @@ class HomeViewModel(
     var homeUiState: HomeUiState by mutableStateOf(HomeUiState())
         private set
 
-    val favoriteBookList: StateFlow<List<Items?>> =
+    val favoriteBookList: StateFlow<List<Pair<String,Items?>>> =
         favoriteBookRepository.getAllFavoriteBooks()
             .map {
-                val bookShelfItems:List<Items> = it.map { favoriteBook ->
+                homeUiState = homeUiState.copy(screenUiState = FavoriteScreenUiState.Success)
+                val bookShelfItemsList = mutableListOf<Pair<String, Items?>>()
+                val favoriteBookItems = it.map {favoriteBook ->
                     favoriteBook.toItems()
                 }
-                Log.d("favorite1", "$bookShelfItems")
-                bookShelfItems
+                for(favoriteBook in favoriteBookItems){
+                    val bookShelfItemId = UUID.randomUUID().toString()
+                    bookShelfItemsList.add(Pair(bookShelfItemId, favoriteBook))
+                }
+                bookShelfItemsList
+            }
+            .catch { e->
+                homeUiState = homeUiState.copy(screenUiState = FavoriteScreenUiState.Error("favoriteBookList", e.message.toString()))
             }
             .stateIn(
                 scope = viewModelScope,
@@ -43,32 +62,34 @@ class HomeViewModel(
                 initialValue = emptyList()
             )
 
+
     fun isShowFavoriteScreen(favorite: Boolean) {
         homeUiState = homeUiState.copy(showOnFavoriteScreen = favorite)
     }
 
     fun pickUpItemBookShelf(key: String?): Items {
         return favoriteBookList.value.firstOrNull {
-            it?.id == key
-        } ?: Items()
+            it.second?.id == key
+        }?.second ?: Items()
     }
 
     suspend fun toggleFavoriteBook(items: Items) {
-        val list: List<FavoriteBook> = getFavoriteBooks().first()
-        Log.d("toggle1", "$list")
-        if(list.any{it.title == items.volumeInfo?.title}) {
-            deleteFavoriteBook(items)
-        } else {
-            saveFavoriteBook(items)
+        viewModelScope.launch {
+            withContext(Dispatchers.IO)  {
+                val list: List<FavoriteBook> = getFavoriteBooks().first()
+                if(list.any{it.title == items.volumeInfo?.title}) {
+                    deleteFavoriteBook(items)
+                } else {
+                    saveFavoriteBook(items)
+                }
+            }
         }
     }
     private suspend fun saveFavoriteBook(items: Items) {
-        Log.d("toggle4", "${items.toFavoriteBook()}")
         favoriteBookRepository.insertFavoriteBook(items.toFavoriteBook())
     }
 
     private suspend fun deleteFavoriteBook(items: Items) {
-        Log.d("toggle5", "${items.toFavoriteBook()}")
         favoriteBookRepository.deleteFavoriteBook(items.toFavoriteBook())
     }
 
@@ -77,7 +98,9 @@ class HomeViewModel(
 
 @Immutable
 data class HomeUiState(
-    val showOnFavoriteScreen: Boolean = true
+    val showOnFavoriteScreen: Boolean = true,
+    val toDetailsScreen: Boolean = false,
+    val screenUiState: FavoriteScreenUiState = FavoriteScreenUiState.Loading
 )
 
 fun Items.toFavoriteBook(): FavoriteBook = FavoriteBook(
