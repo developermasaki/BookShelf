@@ -47,7 +47,7 @@ class SearchViewModelTest {
         advanceUntilIdle()
         assertEquals(
             FakeDataSource.BookShelfItems.items,
-            searchViewModel.searchUiState.bookShelfItems
+            searchViewModel.showedBookShelfItems
         )
     }
 }
