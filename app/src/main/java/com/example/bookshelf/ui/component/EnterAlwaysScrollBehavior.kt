@@ -41,12 +41,12 @@ Box(
 
 
 // SegmentedButtonが下にスクロールしたら消え、上にスクロールしたら表示されるためのScrollBehavior
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun segmentedButtonScrollBehavior(
-    initialHeightOffsetLimit: Float = 0f
-): OriginalEnterAlwaysScrollBehavior =
-    enterAlwaysScrollBehavior(state = rememberTopAppBarState(initialHeightOffsetLimit = initialHeightOffsetLimit))
+//@OptIn(ExperimentalMaterial3Api::class)
+//@Composable
+//fun segmentedButtonScrollBehavior(
+//    initialHeightOffsetLimit: Float = 0f
+//): OriginalEnterAlwaysScrollBehavior =
+//    enterAlwaysScrollBehavior(state = rememberTopAppBarState(initialHeightOffsetLimit = initialHeightOffsetLimit))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +86,7 @@ class OriginalEnterAlwaysScrollBehavior(
                 }
             }
 
+            @Suppress("SameReturnValue")
             override fun onPostScroll(
                 consumed: Offset,
                 available: Offset,

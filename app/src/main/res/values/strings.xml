@@ -2,13 +2,13 @@
     <string name="app_name">BookShelf</string>
     <string name="noBookPhoto">該当の写真はありません</string>
     <string name="noBook">該当する検索結果はありませんでした</string>
-    <string name="noFavorite">お気に入りの本がありません。\n 検索してください。</string>
+    <string name="noSearched">まだ検索していません。 \n ぜひ検索しましょう！</string>
+    <string name="noFavorite">お気に入りの本がありません。\n ぜひ検索しましょう！</string>
     <string name="searchToast">1つ以上項目を入力してください。</string>
     <string name="connectionError">ダウンロードできません</string>
     <string name="httpError">APIが受け付けてくれません</string>
     <string name="apiRequestOver">APIの1日の使用制限回数を超えました</string>
     <string name="search">検索</string>
-    <string name="reimport">再検索</string>
     <string name="details">Details</string>
     <string name="dialogDescription">一つ以上の項目を入力して検索してください</string>
     <string name="fullTextSearch">全文検索</string>
