@@ -11,7 +11,10 @@
 </p>
 
 ## 実際に動いてる様子
+### ライトモード
 https://github.com/user-attachments/assets/a7df8884-1745-4bd9-9a15-4effdc216d87
+### ダークモード
+https://github.com/user-attachments/assets/5f496fb3-9d11-4793-b397-e3295a531678
 
 ## 画面一覧
 
