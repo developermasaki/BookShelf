@@ -1,6 +1,7 @@
 package com.example.bookshelf.ui
 
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.animateContentSize
@@ -19,6 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -45,11 +50,20 @@ fun TopAppBar(
     modifier: Modifier = Modifier,
     scrollBehavior: TopAppBarScrollBehavior?,
     titleText: String,
+    canNavigateBack: Boolean = false,
+    isDisplayConfirmBack: Boolean = false,
+    confirmIsBack: @Composable (NavHostController) -> Boolean = {false},
     navController: NavHostController,
 ) {
     val keyboardController = LocalSoftwareKeyboardController.current
     val sharedTransitionScope = LocalSharedTransitionScope.current
         ?: throw IllegalStateException("No SharedElementScope found")
+
+    // 編集時に戻るか確認するため
+    var isConfirmBack by remember { mutableStateOf(false) }
+    if(isConfirmBack) {
+        isConfirmBack = confirmIsBack(navController)
+    }
 
     with(sharedTransitionScope) {
         AnimatedVisibility(true) {
@@ -57,12 +71,18 @@ fun TopAppBar(
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     AnimationModel(
-                        visible = navController.previousBackStackEntry != null,
+                        visible = canNavigateBack,
                         content = {
                             IconButton(
                                 onClick = {
-                                    keyboardController?.hide()
-                                    if(navController.currentBackStackEntry != null) navController.popBackStack()
+                                    if(isDisplayConfirmBack) {
+                                        Log.d("TopAppBar", "NotBack${confirmIsBack}")
+                                        isConfirmBack = true
+                                    } else {
+                                        Log.d("TopAppBar", "Back")
+                                        keyboardController?.hide()
+                                        if(navController.currentBackStackEntry != null) navController.popBackStack()
+                                    }
                                 }
                             ){
                                 Icon(

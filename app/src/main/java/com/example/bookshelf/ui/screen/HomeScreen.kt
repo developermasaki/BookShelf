@@ -84,9 +84,9 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.example.bookshelf.R
-import com.example.bookshelf.network.ImageLinks
-import com.example.bookshelf.network.Items
-import com.example.bookshelf.network.VolumeInfo
+import com.example.bookshelf.model.ImageLinks
+import com.example.bookshelf.model.Items
+import com.example.bookshelf.model.VolumeInfo
 import com.example.bookshelf.ui.TopAppBar
 import com.example.bookshelf.ui.component.enterAlwaysScrollBehavior
 import com.example.bookshelf.ui.navigation.LocalSharedTransitionScope
@@ -146,11 +146,11 @@ fun HomeScreen(
 
     Column(modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)) {
         TopAppBar(
+            modifier = Modifier
+                .wrapContentSize(),
             scrollBehavior = scrollBehavior,
             titleText = stringResource(R.string.app_name),
-            navController = navController,
-            modifier = Modifier
-                .wrapContentSize()
+            navController = navController
 
         )
         OriginalTabRow(
@@ -260,7 +260,7 @@ private fun FavoriteScreen (
             is FavoriteScreenUiState.Loading -> LoadingScreen()
             is FavoriteScreenUiState.Success -> OriginalLazyVerticalGrid(
                 modifier = modifier,
-                judgeScreenText = "favorite",
+                screenName = "favorite",
                 noItemsText = stringResource(R.string.noFavorite),
                 showedItems = favoriteBookList,
                 favoriteBookList = favoriteBookList,
@@ -289,7 +289,7 @@ private fun SearchResultScreen(
     animatedVisibilityScope: AnimatedVisibilityScope?,
     modifier: Modifier = Modifier
 ){
-    // ある程度スクロールしたら、自動でAPIの読み込みをするため\
+    // ある程度スクロールしたら、自動でAPIの読み込みをするため
     var every38Index by rememberSaveable { mutableIntStateOf(38) }
     LaunchedEffect(state, searchUiState) {
         snapshotFlow { state.firstVisibleItemIndex }
@@ -334,7 +334,7 @@ private fun SearchResultScreen(
                 }
             is SearchScreenUiState.Success ->OriginalLazyVerticalGrid(
                 modifier = modifier,
-                judgeScreenText = "search",
+                screenName = "search",
                 noItemsText = stringResource(R.string.noBook),
                 showedItems = bookShelfItems,
                 favoriteBookList = favoriteBookList,
@@ -352,7 +352,7 @@ private fun SearchResultScreen(
 @Composable
 private fun OriginalLazyVerticalGrid(
     modifier: Modifier = Modifier,
-    judgeScreenText: String,
+    screenName: String,
     noItemsText: String,
     showedItems: List<Pair<String, Items?>>,
     favoriteBookList: List<Pair<String, Items?>>,
@@ -381,9 +381,9 @@ private fun OriginalLazyVerticalGrid(
             ) { book ->
                 BookCard(
                     items = book.second ?: Items(),
-                    judgeScreen = judgeScreenText,
+                    judgeScreen = screenName,
                     onClick = {
-                        navController.navigate(judgeScreenText+"Details/${book.second?.id}")
+                        navController.navigate("${DetailsDestination.route}/${book.second?.id}/${screenName}")
                     },
                     toggleFavoriteBook = toggleFavoriteBook,
                     favoriteBookList = favoriteBookList,
@@ -429,7 +429,7 @@ private fun BookCard(
             Card(
                 modifier = modifier
                     .sharedBounds(
-                        rememberSharedContentState(key = "BookCard${judgeScreen}${sharedElementKey}") ,
+                        rememberSharedContentState(key = "Card${judgeScreen}${sharedElementKey}") ,
                         animatedVisibilityScope,
                         placeHolderSize = animatedSize
                     )
@@ -711,7 +711,7 @@ private fun ErrorScreen(
 @Preview
 @Composable
 fun PreviewSuccessScreen1() {
-    val fakeBookShelfList: List<Pair<String,Items?>> = listOf(
+    val fakeBookShelfList: List<Pair<String, Items?>> = listOf(
         "1" to Items(),
         "2" to Items(
             volumeInfo = VolumeInfo(

@@ -1,11 +1,11 @@
 package com.example.bookshelf.fake
 
-import com.example.bookshelf.network.BookShelfItems
-import com.example.bookshelf.network.IndustryIdentifiers
-import com.example.bookshelf.network.Items
-import com.example.bookshelf.network.RetailPrice
-import com.example.bookshelf.network.SaleInfo
-import com.example.bookshelf.network.VolumeInfo
+import com.example.bookshelf.model.BookShelfItems
+import com.example.bookshelf.model.IndustryIdentifiers
+import com.example.bookshelf.model.Items
+import com.example.bookshelf.model.RetailPrice
+import com.example.bookshelf.model.SaleInfo
+import com.example.bookshelf.model.VolumeInfo
 
 object FakeDataSource {
     val BookShelfItems = BookShelfItems(
@@ -23,7 +23,8 @@ object FakeDataSource {
                         IndustryIdentifiers(
                             type = "ISBN_10",
                             identifier = "9780743273565"
-                    )),
+                    )
+                    ),
                     pageCount = 180,
                     categories = listOf("Fiction"),
                     imageLinks = null

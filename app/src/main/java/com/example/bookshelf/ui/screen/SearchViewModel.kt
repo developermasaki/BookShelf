@@ -8,9 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookshelf.data.BookShelfRepository
+import com.example.bookshelf.data.remote.BookShelfRepository
 import com.example.bookshelf.data.UserPreferencesRepository
-import com.example.bookshelf.network.Items
+import com.example.bookshelf.model.Items
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,59 +53,28 @@ class SearchViewModel(
         }
     }
 
-    fun pickUpItemBookShelf(key: String?): Items {
-        return showedBookShelfItems.value.firstOrNull {
-            it.second?.id == key
-        }?.second ?: Items()
-    }
-
-    fun updateEditTextField(key: EditTextField, value: String) {
+    fun updateEditTextField(key: EditFieldInSearchScreen, value: String) {
         viewModelScope.launch{
             when(key) {
-                EditTextField.FullTextSearch -> {
+                EditFieldInSearchScreen.FullTextSearch -> {
                     searchUiState = searchUiState.copy(fullTextSearch = value)
                     withContext(Dispatchers.IO){ userPreferencesRepository.saveSearchKeyword(value) }
                 }
-                EditTextField.TitleSearch -> {
+                EditFieldInSearchScreen.TitleSearch -> {
                     searchUiState = searchUiState.copy(titleSearch = value)
                     withContext(Dispatchers.IO) { userPreferencesRepository.saveTitle(value) }
                 }
-                EditTextField.AuthorSearch -> {
+                EditFieldInSearchScreen.AuthorSearch -> {
                     searchUiState = searchUiState.copy(authorSearch = value)
                     withContext(Dispatchers.IO) { userPreferencesRepository.saveAuthor(value) }
                 }
-                EditTextField.PublishingCompany -> {
+                EditFieldInSearchScreen.PublishingCompany -> {
                     searchUiState = searchUiState.copy(publishingCompany = value)
                     withContext(Dispatchers.IO) { userPreferencesRepository.savePublishingCompany(value) }
                 }
             }
         }
         judgeIsNoInput()
-    }
-
-    fun authorsListUp(authorsList: List<String?>?): String? {
-        var authorsLine: String? = null
-        if (authorsList?.size != 0) {
-            var count = 0
-            authorsList?.forEach { author ->
-                if(count == 0) {
-                    authorsLine = author
-                    count++
-                } else{
-                    authorsLine += "$author "
-                }
-            }
-        }
-        return authorsLine
-    }
-
-    fun showPrice(price: Double?, country: String?): String? {
-        var showedPrice: String? = null
-        if(price != null && country != null) {
-            val priceMark = Currency.getInstance(country).symbol
-            showedPrice = "$priceMark $price"
-        }
-        return  showedPrice
     }
 
     fun isFirstSearch(firstSearch: Boolean){
@@ -140,16 +109,24 @@ class SearchViewModel(
             }
 
             try {
-                val bookShelfItems: List<Items?> = bookShelfRepository.getBookShelfItems(
-                    search = searchText,
-                    index = index
-                ).items ?: emptyList()
+                val bookShelfItems: List<Items?> = if(isFirstSearch) {
+                    bookShelfRepository.getSearchBookShelfItems(
+                        refresh = isFirstSearch,
+                        search = searchText
+                    ).items
+                } else {
+                    bookShelfRepository.getAddSearchBookShelfItems(
+                        search = searchText,
+                        index = index
+                    ).items
+                }
+                Log.d("SearchViewModel","bookShelfItems: $bookShelfItems")
                 val bookShelfItemsList = mutableListOf<Pair<String, Items?>>()
                 /* 時々、OriginalLazyVerticalGridをスクロールしていると、なぜか同じBookCardの内容が二つ作られていることがあった。
                 そこでGoogleBooksAPIから送信されるデータに重複があるのではないかと考え、コードを作った。
                  */
                 for(bookShelfItem in bookShelfItems) {
-                    if(
+                    if (
                         !bookShelfItemsList.any { it.second?.id == bookShelfItem?.id } &&
                         showedBookShelfItems.value.none { it.second?.id == bookShelfItem?.id }
                         ){
@@ -187,6 +164,31 @@ class SearchViewModel(
     }
 }
 
+fun showPrice(price: Double?, country: String?): String? {
+    var showedPrice: String? = null
+    if(price != null && country != null) {
+        val priceMark = Currency.getInstance(country).symbol
+        showedPrice = "$priceMark $price"
+    }
+    return  showedPrice
+}
+
+fun authorsListUp(authorsList: List<String?>?): String? {
+    var authorsLine: String? = null
+    if (authorsList?.size != 0) {
+        var count = 0
+        authorsList?.forEach { author ->
+            if(count == 0) {
+                authorsLine = author
+                count++
+            } else{
+                authorsLine += "$author "
+            }
+        }
+    }
+    return authorsLine
+}
+
 data class SearchUiState(
     val fullTextSearch: String = "",
     val titleSearch: String = "",
@@ -198,6 +200,6 @@ data class SearchUiState(
 )
 
 @Immutable
-enum class EditTextField {
+enum class EditFieldInSearchScreen {
     FullTextSearch, TitleSearch, AuthorSearch, PublishingCompany
 }
