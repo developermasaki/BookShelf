@@ -1,7 +1,8 @@
-package com.example.bookshelf.data
+package com.example.bookshelf.data.remote
 
 import com.example.bookshelf.network.BookShelfApiService
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
@@ -22,7 +23,11 @@ class BookShelfAppContainer: AppContainer {
         retrofit.create(BookShelfApiService::class.java)
     }
 
+    private val retrofitRemoteDataSource: BookShelfRemoteDataSource by lazy {
+        BookShelfRemoteDataSource(retrofitService, Dispatchers.IO)
+    }
+
     override val bookShelfRepository: BookShelfRepository by lazy {
-        NetworkBookShelfRepository(retrofitService)
+        NetworkBookShelfRepository(retrofitRemoteDataSource)
     }
 }

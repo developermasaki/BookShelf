@@ -108,6 +108,7 @@ fun SearchScreen(
                 TopAppBar(
                     scrollBehavior = null,
                     titleText = stringResource(R.string.search),
+                    canNavigateBack = true,
                     navController = navController,
                 )
             }
@@ -186,7 +187,7 @@ fun TextFieldList(
     navController: NavHostController,
     keyboardController: SoftwareKeyboardController?,
     focusRequester: FocusRequester,
-    onValueChanged: (EditTextField, String) -> Unit,
+    onValueChanged: (EditFieldInSearchScreen, String) -> Unit,
     research: suspend (Boolean) -> Unit,
     isShowFavoriteScreen: (Boolean) -> Unit,
     modifier: Modifier = Modifier
@@ -206,7 +207,7 @@ fun TextFieldList(
             value = searchUiState.fullTextSearch,
             leadingIcon = dialogList[0].icon,
             label = stringResource(dialogList[0].name),
-            key = EditTextField.FullTextSearch,
+            key = EditFieldInSearchScreen.FullTextSearch,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next
             ),
@@ -218,7 +219,7 @@ fun TextFieldList(
             value = searchUiState.titleSearch,
             leadingIcon = dialogList[1].icon,
             label = stringResource(dialogList[1].name),
-            key = EditTextField.TitleSearch,
+            key = EditFieldInSearchScreen.TitleSearch,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next
             ),
@@ -229,7 +230,7 @@ fun TextFieldList(
             value = searchUiState.authorSearch,
             leadingIcon = dialogList[2].icon,
             label = stringResource(dialogList[2].name),
-            key = EditTextField.AuthorSearch,
+            key = EditFieldInSearchScreen.AuthorSearch,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Next
             ),
@@ -240,7 +241,7 @@ fun TextFieldList(
             value = searchUiState.publishingCompany,
             leadingIcon = dialogList[3].icon,
             label = stringResource(dialogList[3].name),
-            key = EditTextField.PublishingCompany,
+            key = EditFieldInSearchScreen.PublishingCompany,
             keyboardOptions = KeyboardOptions.Default.copy(
                 imeAction = ImeAction.Search
             ),
@@ -270,12 +271,13 @@ fun CustomTextField(
     value: String,
     leadingIcon: Int,
     label: String,
-    key: EditTextField,
+    key: EditFieldInSearchScreen,
     keyboardOptions: KeyboardOptions,
     keyboardActions: KeyboardActions,
-    onValueChanged: (EditTextField, String) -> Unit,
+    onValueChanged: (EditFieldInSearchScreen, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // selectionで指定することで、カーソルを文字の末尾に常に持ってくる
     var textFieldValue by remember {
         mutableStateOf(
             TextFieldValue(

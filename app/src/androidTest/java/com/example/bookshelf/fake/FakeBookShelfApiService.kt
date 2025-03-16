@@ -1,7 +1,7 @@
 package com.example.bookshelf.fake
 
 import com.example.bookshelf.network.BookShelfApiService
-import com.example.bookshelf.network.BookShelfItems
+import com.example.bookshelf.model.BookShelfItems
 
 class FakeBookShelfApiService: BookShelfApiService {
     override suspend fun getBookShelfItems(

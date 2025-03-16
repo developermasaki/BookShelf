@@ -5,8 +5,8 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
-import com.example.bookshelf.data.AppContainer
-import com.example.bookshelf.data.BookShelfAppContainer
+import com.example.bookshelf.data.remote.AppContainer
+import com.example.bookshelf.data.remote.BookShelfAppContainer
 import com.example.bookshelf.data.FavoriteAppContainer
 import com.example.bookshelf.data.FavoriteBookAppContainer
 import com.example.bookshelf.data.UserPreferencesRepository

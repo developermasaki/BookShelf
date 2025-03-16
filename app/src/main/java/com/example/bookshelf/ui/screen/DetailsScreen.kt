@@ -2,7 +2,6 @@ package com.example.bookshelf.ui.screen
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -28,8 +27,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,6 +44,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -57,32 +59,43 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.bookshelf.R
-import com.example.bookshelf.network.ImageLinks
-import com.example.bookshelf.network.IndustryIdentifiers
-import com.example.bookshelf.network.Items
-import com.example.bookshelf.network.RetailPrice
-import com.example.bookshelf.network.SaleInfo
-import com.example.bookshelf.network.VolumeInfo
+import com.example.bookshelf.model.ImageLinks
+import com.example.bookshelf.model.IndustryIdentifiers
+import com.example.bookshelf.model.Items
+import com.example.bookshelf.model.RetailPrice
+import com.example.bookshelf.model.SaleInfo
+import com.example.bookshelf.model.VolumeInfo
+import com.example.bookshelf.ui.AppViewModelProvider
 import com.example.bookshelf.ui.TopAppBar
 import com.example.bookshelf.ui.navigation.LocalSharedTransitionScope
+import com.example.bookshelf.ui.navigation.NavigationDestination
 import kotlinx.coroutines.launch
+
+object DetailsDestination: NavigationDestination {
+    override val route = "details"
+    override val titleRes = R.string.details
+    const val ITEM_ID_ARG = "itemId"
+    const val SCREEN_NAME_ARG = "screenName"
+    val routeWithArgs = "$route/{$ITEM_ID_ARG}/{$SCREEN_NAME_ARG}"
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Suppress("functionName")
 @Stable
 @Composable
 fun DetailsScreen(
+    modifier: Modifier = Modifier,
     sharedElementKey: String,
     judgeScreen: String,
     navController: NavHostController,
     animatedVisibilityScope: AnimatedVisibilityScope?,
-    searchViewModel: SearchViewModel,
     homeViewModel: HomeViewModel,
-    modifier: Modifier = Modifier
+    detailsViewModel: DetailsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     BackHandler {
         if(navController.currentBackStackEntry != null) navController.popBackStack()
@@ -90,11 +103,9 @@ fun DetailsScreen(
 
     val sharedTransitionScope = LocalSharedTransitionScope.current
         ?: throw IllegalStateException("No SharedElementScope found")
-    val items: Items = if(judgeScreen == "favorite")
-        homeViewModel.pickUpItemBookShelf(sharedElementKey) else searchViewModel.pickUpItemBookShelf(sharedElementKey)
-    val imageUrl = items.volumeInfo?.imageLinks?.thumbnail?.replace("http","https") ?: R.drawable.no_image
-    var upImage by rememberSaveable{ mutableStateOf(false) }
-    val favoriteBookList by homeViewModel.favoriteBookList.collectAsState()
+    var screenType by remember { mutableStateOf(judgeScreen) }
+    val uiState by detailsViewModel.uiState.collectAsState()
+    val imageUrl = uiState.item.volumeInfo?.imageLinks?.thumbnail?.replace("http","https") ?: R.drawable.no_image
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -105,6 +116,7 @@ fun DetailsScreen(
                     TopAppBar(
                         scrollBehavior = null,
                         titleText = stringResource(R.string.details),
+                        canNavigateBack = true,
                         navController = navController,
                     )
                 }
@@ -112,7 +124,7 @@ fun DetailsScreen(
                 Surface(
                     modifier = modifier
                         .sharedBounds(
-                            rememberSharedContentState(key = "BookCard${judgeScreen}${sharedElementKey}"),
+                            rememberSharedContentState(key = "Card${screenType}${sharedElementKey}"),
                             animatedVisibilityScope,
                         )
                         .fillMaxSize()
@@ -128,18 +140,19 @@ fun DetailsScreen(
                                 horizontalArrangement = Arrangement.End,
                                 modifier = Modifier
                                     .height(24.dp)
-                                    .padding(end = 32.dp)
                                     .fillMaxWidth()
+                                    .padding(end = 32.dp)
                             ) {
                                 IconButton(
                                     onClick = {
                                         coroutineScope.launch {
-                                            homeViewModel.toggleFavoriteBook(items)
+                                            homeViewModel.toggleFavoriteBook(uiState.item)
+                                            if(judgeScreen == "favorite" && navController.currentBackStackEntry != null) navController.popBackStack()
                                         }
                                     }
                                 ) {
                                     if (
-                                        favoriteBookList.any { it.second?.id == items.id }
+                                        uiState.isFavorite
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Favorite,
@@ -161,69 +174,54 @@ fun DetailsScreen(
                                     }
                                 }
                             }
-                            AnimatedVisibility(
-                                visible = !upImage
+                            AsyncImage(
+                                model = ImageRequest.Builder(context = LocalContext.current)
+                                    .data(imageUrl)
+                                    .crossfade(true)
+                                    .placeholderMemoryCacheKey("image-key${sharedElementKey}")
+                                    .memoryCacheKey("image-key${sharedElementKey}")
+                                    .build(),
+                                contentDescription = uiState.item.volumeInfo?.title ?: stringResource(R.string.noBookPhoto),
+                                error = painterResource(R.drawable.ic_broken_image),
+                                contentScale = ContentScale.FillHeight,
+                                modifier = Modifier
+                                    .sharedBounds(
+                                        rememberSharedContentState(key = "BookImage${screenType}${sharedElementKey}"),
+                                        animatedVisibilityScope,
+                                        resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
+                                    )
+                                    .height(200.dp)
+                                    .width(150.dp)
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.End,
+                                modifier = Modifier
+                                    .wrapContentHeight()
+                                    .fillMaxWidth()
+                                    .padding(end = 32.dp)
                             ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context = LocalContext.current)
-                                        .data(imageUrl)
-                                        .crossfade(true)
-                                        .placeholderMemoryCacheKey("image-key${sharedElementKey}")
-                                        .memoryCacheKey("image-key${sharedElementKey}")
-                                        .build(),
-                                    contentDescription = items.volumeInfo?.title ?: stringResource(R.string.noBookPhoto),
-                                    error = painterResource(R.drawable.ic_broken_image),
-                                    contentScale = ContentScale.FillHeight,
-                                    modifier = Modifier
-                                        .sharedBounds(
-                                            rememberSharedContentState(key = "BookImage${judgeScreen}${sharedElementKey}"),
-                                            animatedVisibilityScope,
-                                            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds
-                                        )
-                                        .height(200.dp)
-                                        .width(150.dp)
-                                        .clickable {
-                                            upImage = !upImage
+                                if (uiState.isFavorite) {
+                                    FilledIconButton(
+                                        onClick = {
+                                            screenType = "Edit"
+                                            navController.navigate("${EditDestination.route}/${uiState.item.id}")
                                         }
-                                )
+                                    ){
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = stringResource(R.string.edit)
+                                        )
+                                    }
+                                }
                             }
-                            Spacer(modifier = Modifier.height(32.dp))
                             ColumnList(
-                                items = items,
-                                authorsListUp = searchViewModel::authorsListUp,
-                                showPrice = searchViewModel::showPrice,
+                                items = uiState.item,
+                                authorsListUp = ::authorsListUp,
+                                showPrice = ::showPrice,
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .skipToLookaheadSize()
                             )
-                        }
-                        AnimatedVisibility(
-                            visible = upImage,
-                            modifier = Modifier
-                                .height(400.dp)
-                                .width(300.dp)
-                                .align(Alignment.Center)
-                        ) {
-                            Surface(
-                                tonalElevation = 40.dp,
-                                modifier = Modifier.clip(RoundedCornerShape(16.dp))
-                            ) {
-                                AsyncImage(
-                                    model = ImageRequest.Builder(context = LocalContext.current)
-                                        .data(imageUrl)
-                                        .crossfade(true)
-                                        .build(),
-                                    contentDescription = items.volumeInfo?.title ?: stringResource(R.string.noBookPhoto),
-                                    error = painterResource(R.drawable.ic_broken_image),
-                                    contentScale = ContentScale.FillHeight,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp)
-                                        .clickable {
-                                            upImage = !upImage
-                                        }
-                                )
-                            }
                         }
                     }
                 }
@@ -242,8 +240,8 @@ fun ColumnList(
     modifier: Modifier = Modifier
 ) {
     //ISBNがISBN10やISBN13、otherで返されるので、優先的にISBN13を表示できるようにしている
-    val isbn: List<IndustryIdentifiers?>? = items?.volumeInfo?.industryIdentifiers?.filter {it?.type == "ISBN_13"}
-        ?: items?.volumeInfo?.industryIdentifiers?.filter { it?.type == "ISBN_10" }
+    val isbn: IndustryIdentifiers? = items?.volumeInfo?.industryIdentifiers?.find {it?.type == "ISBN_13"}
+        ?: items?.volumeInfo?.industryIdentifiers?.find { it?.type == "ISBN_10" }
 
     Column(
         modifier = modifier
@@ -272,7 +270,7 @@ fun ColumnList(
             content = items?.volumeInfo?.publishedDate ?: stringResource(R.string.noData),
         )
         AnimatedContentList(
-            category = stringResource(R.string.publishingCompany),
+            category = stringResource(R.string.publisher),
             content = items?.volumeInfo?.publisher ?: stringResource(R.string.noData),
         )
         AnimatedContentList(
@@ -285,10 +283,8 @@ fun ColumnList(
             content = items?.volumeInfo?.pageCount?.toString() ?: stringResource(R.string.noData),
         )
         AnimatedContentList(
-            category = if(!isbn.isNullOrEmpty()) isbn[0]?.type ?: stringResource(R.string.isbn) else stringResource(
-                R.string.isbn),
-            content = if(!isbn.isNullOrEmpty()) isbn[0]?.identifier ?: stringResource(R.string.noData) else stringResource(
-                R.string.noData),
+            category = isbn?.type ?: stringResource(R.string.isbn),
+            content = isbn?.identifier ?: stringResource(R.string.noData)
         )
         Spacer(
             modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())

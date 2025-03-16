@@ -6,14 +6,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.bookshelf.data.FavoriteBook
+import com.example.bookshelf.model.FavoriteBook
 import com.example.bookshelf.data.FavoriteBookRepository
-import com.example.bookshelf.network.ImageLinks
-import com.example.bookshelf.network.IndustryIdentifiers
-import com.example.bookshelf.network.Items
-import com.example.bookshelf.network.RetailPrice
-import com.example.bookshelf.network.SaleInfo
-import com.example.bookshelf.network.VolumeInfo
+import com.example.bookshelf.model.ImageLinks
+import com.example.bookshelf.model.IndustryIdentifiers
+import com.example.bookshelf.model.Items
+import com.example.bookshelf.model.RetailPrice
+import com.example.bookshelf.model.SaleInfo
+import com.example.bookshelf.model.VolumeInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,7 +39,7 @@ class HomeViewModel(
     var homeUiState: HomeUiState by mutableStateOf(HomeUiState())
         private set
 
-    val favoriteBookList: StateFlow<List<Pair<String,Items?>>> =
+    val favoriteBookList: StateFlow<List<Pair<String, Items?>>> =
         favoriteBookRepository.getAllFavoriteBooks()
             .map {
                 homeUiState = homeUiState.copy(screenUiState = FavoriteScreenUiState.Success)
@@ -85,6 +85,7 @@ class HomeViewModel(
             }
         }
     }
+
     private suspend fun saveFavoriteBook(items: Items) {
         favoriteBookRepository.insertFavoriteBook(items.toFavoriteBook())
     }
@@ -104,14 +105,16 @@ data class HomeUiState(
 )
 
 fun Items.toFavoriteBook(): FavoriteBook = FavoriteBook(
-    id = this.id!!,
+    id = this.id ?: UUID.randomUUID().toString(),
     title = this.volumeInfo?.title,
     authors = authorsListUp(this.volumeInfo?.authors),
     publisher = this.volumeInfo?.publisher,
     publishedDate = this.volumeInfo?.publishedDate,
     description = this.volumeInfo?.description,
-    type = this.saleInfo?.retailPrice?.currencyCode,
-    identifier = this.volumeInfo?.industryIdentifiers?.get(0)?.identifier,
+    type = this.volumeInfo?.industryIdentifiers?.find {it?.type == "ISBN_13"}?.type
+        ?: this.volumeInfo?.industryIdentifiers?.find { it?.type == "ISBN_10" }?.type,
+    identifier = this.volumeInfo?.industryIdentifiers?.find {it?.type == "ISBN_13"}?.identifier
+        ?: this.volumeInfo?.industryIdentifiers?.find { it?.type == "ISBN_10" }?.identifier,
     pageCount = this.volumeInfo?.pageCount,
     categories = this.volumeInfo?.categories?.get(0),
     imageLinks = this.volumeInfo?.imageLinks?.thumbnail,
@@ -146,19 +149,3 @@ fun FavoriteBook.toItems(): Items = Items(
         )
     )
 )
-
-fun authorsListUp(authorsList: List<String?>?): String? {
-    var authorsLine: String? = null
-    if (authorsList?.size != 0) {
-        var count = 0
-        authorsList?.forEach { author ->
-            if(count == 0) {
-                authorsLine = author
-                count++
-            } else{
-                authorsLine += "$author "
-            }
-        }
-    }
-    return authorsLine
-}

@@ -1,6 +1,6 @@
 package com.example.bookshelf
 
-import com.example.bookshelf.data.NetworkBookShelfRepository
+import com.example.bookshelf.data.remote.NetworkBookShelfRepository
 import com.example.bookshelf.fake.FakeBookShelfApiService
 import com.example.bookshelf.fake.FakeDataSource
 import kotlinx.coroutines.test.runTest
@@ -22,6 +22,8 @@ class NetworkBookShelfRepositoryTest {
             val repository = NetworkBookShelfRepository(
                 bookShelfApiService = FakeBookShelfApiService()
             )
-            assertEquals(FakeDataSource.BookShelfItems, repository.getBookShelfItems(search = "", index = 10))
+            assertEquals(FakeDataSource.BookShelfItems, repository.getSearchBookShelfItems(
+                search = ""
+            ))
         }
 }

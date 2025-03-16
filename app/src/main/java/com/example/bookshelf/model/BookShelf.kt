@@ -1,11 +1,11 @@
-package com.example.bookshelf.network
+package com.example.bookshelf.model
 
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class BookShelfItems (
-    val totalItems: Int? = null,
-    val items: List<Items?>? = null
+    val totalItems: Int = 0,
+    val items: List<Items?> = emptyList()
 )
 
 @Serializable

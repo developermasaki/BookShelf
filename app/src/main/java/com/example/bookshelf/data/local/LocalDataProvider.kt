@@ -24,7 +24,7 @@ object LocalDataProvider {
             icon = R.drawable.rounded_person_search_24
         ),
         DialogListModel(
-            name = R.string.publishingCompany,
+            name = R.string.publisher,
             icon = R.drawable.rounded_apartment_24
         )
     )
